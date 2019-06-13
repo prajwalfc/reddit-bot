@@ -1,0 +1,1 @@
+ spark-submit --conf spark.executorEnv.LD_LIBRARY_PATH=$LD_LIBRARY_PATH --executor-memory 15G --num-executors 10 --executor-cores 5 --files hdfs:///data/share/bdm/500cities_tracts.geojson,hdfs:///data/share/bdm/drug_illegal.txt,hdfs:///data/share/bdm/drug_sched2.txt FinalCh-opt-Copy1.py hdfs:///data/share/bdm/tweets-100m.csv
