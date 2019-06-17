@@ -33,4 +33,4 @@ def iterative_levenshtein(s, t):
     
  
     return dist[row][col]
-print(iterative_levenshtein("flaw", "lawn"))
+#print(iterative_levenshtein("flaw", "lawn"))
