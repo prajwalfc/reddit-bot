@@ -51,6 +51,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+*.ipynb
 build/
 develop-eggs/
 dist/
