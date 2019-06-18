@@ -73,7 +73,7 @@ def compareComments(user_commentsAndSubreddit):
 if __name__ == "__main__":
 
 	spark = SparkSession.builder.appName("reddit-bot").getOrCreate()
-	path = "s3n://prajwalfc/dd/temp/temp000000000000"
+	path = "s3a://prajwalfc/dd/temp/temp000000000000"
 	raw = spark.read.json(path).select("body","author","subreddit_id","subreddit").limit(100)
 	rdd = raw.rdd
 	rdd2 = rdd.map(lambda x: (x[1], [(x[2],x[3],x[0])]))
