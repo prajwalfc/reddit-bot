@@ -34,7 +34,7 @@ def compareComments(user_commentsAndSubreddit):
                 count =count +1
     if count >7:
         for commentAndSubreddit in commentsAndSubreddit:
-            yield(user,commentAndSubreddit[0],commentAndSubreddit[1],1)
+            return(user,commentAndSubreddit[0],commentAndSubreddit[1],1)
     
 
 if __name__ == "__main__":
