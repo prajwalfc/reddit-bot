@@ -80,7 +80,7 @@ if __name__ == "__main__":
 	rdd3 = rdd2.reduceByKey(lambda x,y:x+y)
 	rdd4 = rdd3.map(compareComments)
 	rdd5=rdd4.filter(lambda x:x !=None).map(lambda x:x[1]).flatMap(lambda x:x)
-	df=spark.createDataFrame(rdd4.filter(lambda x:x !=None).map(lambda x:x[1]).flatMap(lambda x:x),["subreddit_id","subreddit","body"])
+	df=spark.createDataFrame(rdd4.filter(lambda x:x !=None).map(lambda x:x[1]).flatMap(lambda x:x),schema=["subreddit_id","subreddit","body"])
 	df.write.format("jdbc").options(
                 url="jdbc:postgresql://ec2-3-219-171-129.compute-1.amazonaws.com:5432/reddit",
                 dbtable="test1",
