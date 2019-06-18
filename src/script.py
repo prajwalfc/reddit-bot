@@ -78,6 +78,7 @@ if __name__ == "__main__":
 	rdd = raw.rdd
 	rdd2 = rdd.map(lambda x: (x[1], [(x[2],x[3],x[0])]))
 	rdd3 = rdd2.reduceByKey(lambda x,y:x+y)
+	rdd4 = rdd3.map(compareComments)
 	spark.createDataFrame(rdd4.filter(lambda x:x !=None).map(lambda x:x[1]).flatMap(lambda x:x),["subreddit_id","subreddit","body"]).sqlContext.read.format("jdbc").options(
                 url="jdbc:postgresql://ec2-3-219-171-129.compute-1.amazonaws.com:5432/reddit",
                 dbtable="test",
