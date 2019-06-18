@@ -78,14 +78,13 @@ if __name__ == "__main__":
 	rdd = raw.rdd
 	rdd2 = rdd.map(lambda x: (x[1], [(x[2],x[3],x[0])]))
 	rdd3 = rdd2.reduceByKey(lambda x,y:x+y)
-	rdd3.map(compareComments).take(10)
-	# rdd3.sqlContext.read.format("jdbc").options(
- #                url="jdbc:postgresql://ec2-100-25-14-184.compute-1.amazonaws.com:5432/test",
- #                dbtable="pr",
- #                driver="org.postgresql.Driver",
- #                user = "postgres",
- #                password="prajwalk",
- #                mode = "append").save()
+	rdd3.map(compareComments).toDF().sqlContext.read.format("jdbc").options(
+                url="jdbc:postgresql://ec2-3-219-171-129.compute-1.amazonaws.com:5432/reddit",
+                dbtable="test",
+                driver="org.postgresql.Driver",
+                user = "postgres",
+                password="prajwalk",
+                mode = "append").save()
 
 
 
