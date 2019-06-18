@@ -28,9 +28,6 @@ def iterative_levenshtein(s, t):
             dist[row][col] = min(dist[row-1][col] + 1,      # deletion
                                  dist[row][col-1] + 1,      # insertion
                                  dist[row-1][col-1] + cost) # substitution
-    for r in range(rows):
-        print(dist[r])
     
- 
     return dist[row][col]
 #print(iterative_levenshtein("flaw", "lawn"))
