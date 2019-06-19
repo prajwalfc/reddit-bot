@@ -53,6 +53,8 @@ def compareComments(user_commentsAndSubreddit):
     import random
     sampledCommentsAndSubreddit=[]
     user,commentsAndSubreddit = user_commentsAndSubreddit
+    if len(commentsAndSubreddit)==1:
+        return user_commentsAndSubreddit+(2,)
     if len(commentsAndSubreddit)>9:
         sampledCommentsAndSubreddit =random.sample(commentsAndSubreddit,k=9)
     else:
@@ -67,8 +69,15 @@ def compareComments(user_commentsAndSubreddit):
                 count =count +1
     if count >7:
         for commentAndSubreddit in commentsAndSubreddit:
-            return user_commentsAndSubreddit
+            return user_commentsAndSubreddit+(1,)
     
+def mapper(x):
+    user,contents,val=x
+    user_content=[]
+    for content in contents:
+        user_content=user_content+[((user,)+content)+(val,)]
+    return user_content
+
 
 if __name__ == "__main__":
 
@@ -79,8 +88,9 @@ if __name__ == "__main__":
 	rdd2 = rdd.map(lambda x: (x[1], [(x[2],x[3],x[0])]))
 	rdd3 = rdd2.reduceByKey(lambda x,y:x+y)
 	rdd4 = rdd3.map(compareComments)
-	df=rdd4.filter(lambda x:x !=None).map(lambda x:x[1]).flatMap(lambda x:x).toDF()
-	df = df.selectExpr("_1 as subreddit_id", "_2 as subreddit","_3 as body")
+	rdd5 = rdd4.filter(lambda x:x!=None).map(mapper).flatMap(lambda x:x)#.flatMap(lambda x:x).take(10)
+	df = rdd5.toDF()
+	df = df.selectExpr("_1 as username","_2 as subreddit_id", "_3 as subreddit","_4 as body","_5 as isBot")
 	df.write.format("jdbc").options(
                 url="jdbc:postgresql://ec2-3-219-171-129.compute-1.amazonaws.com:5432/reddit",
                 dbtable="test4",
