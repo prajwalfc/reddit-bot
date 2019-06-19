@@ -78,6 +78,12 @@ def mapper(x):
         user_content=user_content+[((user,)+content)+(val,)]
     return user_content
 
+def compareCommentsUserToUser(row):
+    val = iterative_levenshtein(row[0][3][:141],row[1][3][:141])
+    if val<20:
+        return(row[0][:4]+(1,),row[1][:4]+(1,))
+    else:
+        return row        
 
 if __name__ == "__main__":
 
@@ -89,15 +95,24 @@ if __name__ == "__main__":
 	rdd3 = rdd2.reduceByKey(lambda x,y:x+y)
 	rdd4 = rdd3.map(compareComments)
 	rdd5 = rdd4.filter(lambda x:x!=None).map(mapper).flatMap(lambda x:x)#.flatMap(lambda x:x).take(10)
-	df = rdd5.toDF()
-	df = df.selectExpr("_1 as username","_2 as subreddit_id", "_3 as subreddit","_4 as body","_5 as isBot")
+	botRDD = rdd5.filter(lambda x:x[4]==1)
+	nonBotRDD = rdd5.filter(lambda x:x[4]==2)
+	import re
+	appendToBot = nonBotRDD.filter(lambda x:"^I ^am ^a ^bot" in x[3]).map(lambda x:(x[0],x[1],x[2],x[3],1))
+	mergedBots=botRDD.union(appendToBot)
+	nonBotRDD = nonBotRDD.filter(lambda x:"^I ^am ^a ^bot" not in x[3])
+	nonBotRDD2 = nonBotRDD1.map(lambda x:(1,x))
+	nonBotRDD3 = nonBotRDD2
+	joinNonBotRDD = nonBotRDD2.leftOuterJoin(nonBotRDD3).map(lambda x:x[1])\
+                          .filter(lambda x:x[0][0]!=x[1][0])\
+                          .map(lambda x:((tuple(sorted([x[0][0],x[1][0]]))),x))\
+                          .reduceByKey(lambda x,y:y).map(lambda x:x[1])
+	userLevelDiffrenetiate = joinNonBotRDD.map(compareCommentsUserToUser).flatMap(lambda x:x)
+	df = spark.createDataFrame(userLevelDiffrenetiate.map(lambda x: x[0:3]),schema=["username","subreddit_id","subreddit"])
 	df.write.format("jdbc").options(
                 url="jdbc:postgresql://ec2-3-219-171-129.compute-1.amazonaws.com:5432/reddit",
-                dbtable="test4",
+                dbtable="botDb",
                 driver="org.postgresql.Driver",
                 user = "postgres",
                 password="prajwalk",
                 mode = "append").save()
-
-
-
