@@ -112,7 +112,7 @@ if __name__ == "__main__":
 	df.show()
 	df.write.format("jdbc").options(
                 url="jdbc:postgresql://ec2-3-219-171-129.compute-1.amazonaws.com:5432/reddit",
-                dbtable="botDb",
+                dbtable="botDb1",
                 driver="org.postgresql.Driver",
                 user = "postgres",
                 password="prajwalk",
