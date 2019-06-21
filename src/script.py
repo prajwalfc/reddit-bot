@@ -56,6 +56,7 @@ def compareComments(user_commentsAndSubreddit):
     if len(commentsAndSubreddit)==1:
         return user_commentsAndSubreddit+(2,)
     if len(commentsAndSubreddit)>9:
+        ###############To do filter out short comments
         sampledCommentsAndSubreddit =random.sample(commentsAndSubreddit,k=9)
     else:
         sampledCommentsAndSubreddit=commentsAndSubreddit
@@ -65,7 +66,7 @@ def compareComments(user_commentsAndSubreddit):
     count =0
     for i in range(1,len(comments)):
         for j in range(i+1,len(comments)):
-            if iterative_levenshtein(comments[i],comments[j])<20:
+            if iterative_levenshtein(comments[i],comments[j])<30:
                 count =count +1
     if count >7:
         for commentAndSubreddit in commentsAndSubreddit:
@@ -79,38 +80,44 @@ def mapper(x):
     return user_content
 
 def compareCommentsUserToUser(row):
-    val = iterative_levenshtein(row[0][3][:141],row[1][3][:141])
-    if val<20:
+    first_comment = row[0][3][:141]
+    second_comment = row[1][3][:141]
+    doCompare = len(first_comment.split(" "))>=7 and len(second_comment.split(" "))>=7
+    val = -1
+    if doCompare:
+        val = iterative_levenshtein(row[0][3][:141],row[1][3][:141])
+    if val>=0 and val<30:
         return(row[0][:4]+(1,),row[1][:4]+(1,))
     else:
-        return row        
+        return (row[0][:4]+(1,),row[1][:4]+(0,))
+
 
 if __name__ == "__main__":
-
-	spark = SparkSession.builder.appName("reddit-bot").getOrCreate()
-	path = "s3a://prajwalfc/dd/temp/temp000000000000"
-	raw = spark.read.json(path).select("body","author","subreddit_id","subreddit").limit(100)
-	rdd = raw.rdd
-	rdd2 = rdd.map(lambda x: (x[1], [(x[2],x[3],x[0])]))
-	rdd3 = rdd2.reduceByKey(lambda x,y:x+y)
-	rdd4 = rdd3.map(compareComments)
-	rdd5 = rdd4.filter(lambda x:x!=None).map(mapper).flatMap(lambda x:x)#.flatMap(lambda x:x).take(10)
-	botRDD = rdd5.filter(lambda x:x[4]==1)
-	nonBotRDD = rdd5.filter(lambda x:x[4]==2)
-	import re
-	appendToBot = nonBotRDD.filter(lambda x:"^I ^am ^a ^bot" in x[3]).map(lambda x:(x[0],x[1],x[2],x[3],1))
-	mergedBots=botRDD.union(appendToBot)
-	nonBotRDD1 = nonBotRDD.filter(lambda x:"^I ^am ^a ^bot" not in x[3])
-	nonBotRDD2 = nonBotRDD1.map(lambda x:(1,x))
-	nonBotRDD3 = nonBotRDD2
-	joinNonBotRDD = nonBotRDD2.leftOuterJoin(nonBotRDD3).map(lambda x:x[1])\
-                          .filter(lambda x:x[0][0]!=x[1][0])\
-                          .map(lambda x:((tuple(sorted([x[0][0],x[1][0]]))),x))\
-                          .reduceByKey(lambda x,y:y).map(lambda x:x[1])
-	userLevelDiffrenetiate = joinNonBotRDD.map(compareCommentsUserToUser).flatMap(lambda x:x)
-	df = spark.createDataFrame(userLevelDiffrenetiate.map(lambda x: x[0:3]),schema=["username","subreddit_id","subreddit"])
-	df.show()
-	df.write.format("jdbc").options(
+    spark = SparkSession.builder.appName("reddit-bot").getOrCreate()
+    path = "s3a://testbucketforprajwal/temp/temp000000000000"
+    rawDf = spark.read.json(path).select("body", "author", "subreddit_id", "subreddit").limit(100)
+    rawRdd = rawDf.rdd
+    selectedFields = rawRdd.map(lambda x: (x[1], [(x[2], x[3], x[0])]))
+    groupByUser = selectedFields.reduceByKey(lambda x, y: x + y)
+    # group by users and see if they have been posting similar type of comments
+    usersSelfComments = groupByUser.map(compareComments)
+    # filter out nones which means we don't actually know if they are bots or not
+    botsOrNonBots = usersSelfComments.filter(lambda x: x != None).map(mapper).flatMap(lambda x: x)
+    botRDD = botsOrNonBots.filter(lambda x: x[4] == 1)
+    nonBotRDD = botsOrNonBots.filter(lambda x: x[4] == 2)
+    appendToBot = nonBotRDD.filter(lambda x: "^I ^am ^a ^bot" in x[3]).map(lambda x: (x[0], x[1], x[2], x[3], 1))
+    mergedBots = botRDD.union(appendToBot)
+    nonBotRDDNotSure = nonBotRDD.filter(lambda x: "^I ^am ^a ^bot" not in x[3])
+    nonBotRDDNotSureLeftTable = nonBotRDDNotSure.map(lambda x: (1, x))
+    nonBotRDDNotSureRightTable = nonBotRDDNotSureLeftTable
+    joinBotNotSureRDD = nonBotRDDNotSureLeftTable.leftOuterJoin(nonBotRDDNotSureRightTable).map(lambda x: x[1]) \
+        .filter(lambda x: x[0][0] != x[1][0]) \
+        .map(lambda x: ((tuple(sorted([x[0][0], x[1][0]]))), x)) \
+        .reduceByKey(lambda x, y: y).map(lambda x: x[1])
+    userLevelDiffrenetiate = joinBotNotSureRDD.map(compareCommentsUserToUser).flatMap(lambda x: x)
+    df = spark.createDataFrame(userLevelDiffrenetiate.map(lambda x: x[0:3]),schema=["username","subreddit_id","subreddit"])
+    df.show()
+    df.write.format("jdbc").options(
                 url="jdbc:postgresql://ec2-3-219-171-129.compute-1.amazonaws.com:5432/reddit",
                 dbtable="botDb1",
                 driver="org.postgresql.Driver",
