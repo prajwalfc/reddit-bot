@@ -88,8 +88,8 @@ def compareCommentsUserToUser(row):
 if __name__ == "__main__":
 
 	spark = SparkSession.builder.appName("reddit-bot").getOrCreate()
-	path = "s3a://prajwalfc/dd/temp/temp000000000000"
-	raw = spark.read.json(path).select("body","author","subreddit_id","subreddit").limit(100)
+	path = "s3a://prajwalfc/dd/temp/temp000000000000*"
+	raw = spark.read.json(path).select("body","author","subreddit_id","subreddit")
 	rdd = raw.rdd
 	rdd2 = rdd.map(lambda x: (x[1], [(x[2],x[3],x[0])]))
 	rdd3 = rdd2.reduceByKey(lambda x,y:x+y)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 	import re
 	appendToBot = nonBotRDD.filter(lambda x:"^I ^am ^a ^bot" in x[3]).map(lambda x:(x[0],x[1],x[2],x[3],1))
 	mergedBots=botRDD.union(appendToBot)
-	nonBotRDD = nonBotRDD.filter(lambda x:"^I ^am ^a ^bot" not in x[3])
+	nonBotRDD1 = nonBotRDD.filter(lambda x:"^I ^am ^a ^bot" not in x[3])
 	nonBotRDD2 = nonBotRDD1.map(lambda x:(1,x))
 	nonBotRDD3 = nonBotRDD2
 	joinNonBotRDD = nonBotRDD2.leftOuterJoin(nonBotRDD3).map(lambda x:x[1])\
@@ -109,6 +109,7 @@ if __name__ == "__main__":
                           .reduceByKey(lambda x,y:y).map(lambda x:x[1])
 	userLevelDiffrenetiate = joinNonBotRDD.map(compareCommentsUserToUser).flatMap(lambda x:x)
 	df = spark.createDataFrame(userLevelDiffrenetiate.map(lambda x: x[0:3]),schema=["username","subreddit_id","subreddit"])
+	df.show()
 	df.write.format("jdbc").options(
                 url="jdbc:postgresql://ec2-3-219-171-129.compute-1.amazonaws.com:5432/reddit",
                 dbtable="botDb",
