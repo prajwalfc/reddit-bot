@@ -122,5 +122,5 @@ if __name__ == "__main__":
                 dbtable="botDb1",
                 driver="org.postgresql.Driver",
                 user = "postgres",
-                password="prajwalk",
+                password="",
                 mode = "append").save()
