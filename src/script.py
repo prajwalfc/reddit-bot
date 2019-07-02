@@ -91,17 +91,80 @@ def compareCommentsUserToUser(row):
     else:
         return (row[0][:4]+(1,),row[1][:4]+(0,))
 
+def epochToYear(x):
+    import time
+    year = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(x[4]))).split("-")[0]
+    return (x[0],[x[1:4]+(int(x[4]),)+x[5:]+(year,)])
+
+def botTrackWithCommentFrequencyfunc(row):
+    import numpy as np
+    time_diff=[]
+    user,value = row
+    if len(value)<5:
+        return (user,value,0)
+    else:
+        sd=0
+        for i in range (0,len(value)-1):
+            time_diff.append(abs(value[i+1][3]-value[i][3])) 
+        sorted_time_diff = sorted(time_diff)[:7]
+        sd = np.std(sorted_time_diff)
+        if sd in range(0,300):
+            return (user,value,1)
+        else:
+            return (user,value,0)
+def retainRow(row):
+    user,records = row[:2]
+    newRow=[]
+    for record in records:
+        newRow += ((user,)+(record),)
+    return newRow
+
+def partitionFunc(rows):
+    tupleRow = tuple(rows)
+    for i in range(0,len(tupleRow)-2):
+        for j in range(i+1, len(tupleRow)-1):
+            yield(tupleRow[i],tupleRow[j])
+def compareComments(userPairs):
+    user_one_comment, user_two_comment = userPairs[0],userPairs[1]
+    user_one,comment_one = user_one_comment
+    user_two,comment_two = user_two_comment
+    if iterative_levenshtein(comment_one[:140],comment_two[:140])>30:
+        return ((user_one,0),(user_two,0))
+    else:
+        return ((user_one,1),(user_two,1))
+
+def normalizerMapper(user_lst):
+    user,lst =user_lst[0],user_lst[1]
+    total_size = len(lst)
+    self_bot_claim_count = 0
+    for row in lst:
+        if "I am a bot" in row[0]:
+            self_bot_claim_count += 1
+    return (user,lst,self_bot_claim_count/total_size)
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("reddit-bot").getOrCreate()
-    path = "s3a://testbucketforprajwal/temp/temp000000000000"
-    rawDf = spark.read.json(path).select("body", "author", "subreddit_id", "subreddit").limit(100)
-    rawRdd = rawDf.rdd
-    selectedFields = rawRdd.map(lambda x: (x[1], [(x[2], x[3], x[0])]))
-    groupByUser = selectedFields.reduceByKey(lambda x, y: x + y)
-    # group by users and see if they have been posting similar type of comments
-    usersSelfComments = groupByUser.map(compareComments)
-    # filter out nones which means we don't actually know if they are bots or not
+	path = "s3a://prajwalreddit/reddit/reddit_2019_01_000000000000.json"
+	rawDf = spark.read.json(path).select("author","body","subreddit_id","subreddit","created_utc","link_id","parent_id","id","score","controversiality")
+	
+    # Phase 1: Separate out bot's username to botFromCommentFrequency
+    selectedFields = rawRdd.map(epochToYear)
+	groupByUser = selectedFields.reduceByKey(lambda x, y: x+y)
+	labelWithCommentFrequency = groupByUser.map(botTrackWithCommentFrequencyfunc)
+	botFromCommentFrequency = labelWithCommentFrequency.filter(lambda x:x[2]==1).map(lambda x: x[0])
+	undecidedUsersPhase_1 = labelWithCommentFrequency.filter(lambda x:x[2]==0)
+    
+    #Self claimed comments analyzeregainRowFormat = undecidedUsersPhase_1.map(retainRow).flatMap(lambda x:x)
+	regainRowFormat = undecidedUsersPhase_1.map(retainRow).flatMap(lambda x:x)
+	string = "I am a bot"
+	selfClaimmedComments = regainRowFormat.map(lambda x: (x[0],[x[1:]])).reduceByKey(lambda x,y:x+y).map(normalizerMapper)
+    
+    # self claimed bots¶
+    selfClaimedBots = selfClaimmedComments.filter(lambda x: x[2]>0.5).map(lambda x:x[0])
+
+    # undecided bots phase 2¶
+    undecidedUsersPhase_2 = selfClaimmedComments.filter(lambda x: x[2]<0.5).map(retainRow).flatMap(lambda x:x)
+    ########
     botsOrNonBots = usersSelfComments.filter(lambda x: x != None).map(mapper).flatMap(lambda x: x)
     botRDD = botsOrNonBots.filter(lambda x: x[4] == 1)
     nonBotRDD = botsOrNonBots.filter(lambda x: x[4] == 2)
