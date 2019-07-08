@@ -64,9 +64,9 @@ Spark is a library with many cohexisting layers, mostly because of back compatib
 
 -Currently
 
--1 Master
+1 Master
 	- 6 cores, 6GB Memory, 100 EBS
--4 Workers
+4 Workers
 	- 8 cores, 32GB Memory, 100 EBS
 
 
