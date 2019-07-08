@@ -62,7 +62,7 @@ Spark is a library with many cohexisting layers, mostly because of back compatib
  
 ## Hardware
 
-Currently
+-Currently
 
 1 Master
 	- 6 cores, 6GB Memory, 100 EBS
@@ -79,6 +79,6 @@ Refer to [usecases.md](usecases.md) for a more detailed description of the follo
 
 ## Stretch Goals
  
-The project is solely based on detecting bots with metrics that derives from timestamp and comments(text).
-So not all bots could be detetced if they throw in subtle sign and almost close to pass Turing Test.
-This project will be part of Machine learning pipeline where the obtained datasets could be part of Training data sets.
+ -	The project is solely based on detecting bots with metrics that derives from timestamp and comments(text).
+ -	So not all bots could be detetced if they throw in subtle sign and almost close to pass Turing Test.
+ -	This project will be part of Machine learning pipeline where the obtained datasets could be part of Training data sets.
