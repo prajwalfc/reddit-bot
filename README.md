@@ -23,11 +23,18 @@ For now I am only the one.
   - Bots show some kind of pattern while writing comments.
   - Identify the pattern and flag them as bots.
 
+## Input Schema
 
+![alt text](./images/schema.png)
+ 
+	
 ## Pipeline
 
  ![alt text](./images/pipeline.png)
  
+## Spark analytics in steps
+ 	
+ 	![alt text](./images/flowchart.png)
  
 ## Hardware
 
