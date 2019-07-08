@@ -34,7 +34,7 @@ For now I am only the one.
  
 ## Spark analytics in steps
  	
- 	![alt text](./images/flowchart.png)
+ ![alt text](./images/flowchart.png)
  
 ## Hardware
 
